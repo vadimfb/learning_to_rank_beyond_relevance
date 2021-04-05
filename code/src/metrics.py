@@ -2,6 +2,7 @@ from typing import List, Dict
 from math import log2
 from scipy.sparse.lil import lil_matrix
 
+
 def precision_at_k(relevant_lists: Dict[int, List[int]],
                    recommend_lists: Dict[int, List[int]],
                    k: int = 10) -> float:
@@ -39,6 +40,7 @@ def recall_at_k(relevant_lists: Dict[int, List[int]],
 
     return recall
 
+
 def average_precision_at_k(relevant_items: List[int], recommend_items: List[int], k: int = 10) -> float:
 
     relevant_items = set(relevant_items)
@@ -53,21 +55,23 @@ def average_precision_at_k(relevant_items: List[int], recommend_items: List[int]
 
     return score
 
+
 def mean_average_precision_at_k(relevant_lists: Dict[int, List[int]],
                                 recommend_lists: Dict[int, List[int]],
                                 k: int = 10) -> float:
 
-    map = 0
+    ap_sum = 0
     n_users = 0
     for user, relevant_items in relevant_lists.items():
         recommend_items = recommend_lists.get(user, [])
         recommend_items = recommend_items[: k]
-        map += average_precision_at_k(relevant_items, recommend_items, k)
+        ap_sum += average_precision_at_k(relevant_items, recommend_items, k)
         n_users += 1
 
-    map = map / n_users
+    mean_average_precision = ap_sum / n_users
 
-    return map
+    return mean_average_precision
+
 
 def normalized_discounted_cumulative_gain_at_k(relevant_lists: Dict[int, List[int]],
                                                recommend_lists: Dict[int, List[int]],
@@ -93,6 +97,7 @@ def normalized_discounted_cumulative_gain_at_k(relevant_lists: Dict[int, List[in
 
     return ndcg
 
+
 def diversity_at_k(items: List[int],
                    distancies: lil_matrix,
                    k: int = 10) -> float:
@@ -109,6 +114,7 @@ def diversity_at_k(items: List[int],
 
     return diversity
 
+
 def mean_diversity_at_k(item_lists: Dict[int, List[int]], distancies: lil_matrix, k: int = 10) -> float:
 
     mean_diversity = 0
@@ -122,6 +128,7 @@ def mean_diversity_at_k(item_lists: Dict[int, List[int]], distancies: lil_matrix
 
     return mean_diversity
 
+
 def novelty_at_k(items: List[int], item_long_tails: Dict[int, float], k: int = 10) -> float:
 
     items = items[: k]
@@ -133,6 +140,7 @@ def novelty_at_k(items: List[int], item_long_tails: Dict[int, float], k: int = 1
     novelty = novelty / k
 
     return novelty
+
 
 def mean_novelty_at_k(item_lists: Dict[int, List[int]],
                       item_long_tails: Dict[int, float],
@@ -149,6 +157,7 @@ def mean_novelty_at_k(item_lists: Dict[int, List[int]],
 
     return mean_novelty
 
+
 def coverage_at_k(item_lists: Dict[int, List[int]], n_items: int, k: int = 10) -> float:
 
     items_set = set()
@@ -160,9 +169,11 @@ def coverage_at_k(item_lists: Dict[int, List[int]], n_items: int, k: int = 10) -
 
     return coverage
 
+
 def serendipity_at_k(items: List[int], **kwargs) -> float:
     """TO DO"""
     ...
+
 
 def mean_serendipity_at_k(items: List[int], **kwargs) -> float:
     """TO DO"""
