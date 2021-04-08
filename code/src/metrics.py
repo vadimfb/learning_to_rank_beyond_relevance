@@ -53,7 +53,7 @@ def average_precision_at_k(relevant_items: List[int], recommend_items: List[int]
             p_at_rank = hits / (rank + 1)
             score += p_at_rank
 
-    return score
+    return score / min(k, len(relevant_items))
 
 
 def mean_average_precision_at_k(relevant_lists: Dict[int, List[int]],
