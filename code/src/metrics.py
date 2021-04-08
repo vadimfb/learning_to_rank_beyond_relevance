@@ -170,11 +170,38 @@ def coverage_at_k(item_lists: Dict[int, List[int]], n_items: int, k: int = 10) -
     return coverage
 
 
-def serendipity_at_k(items: List[int], **kwargs) -> float:
-    """TO DO"""
-    ...
+def serendipity_at_k(relevant_items: List[int],
+                     history_items: List[int],
+                     recommend_items: List[int],
+                     distancies: lil_matrix,
+                     k: int = 10) -> float:
+
+    distance_sum = 0
+    for recommend_item in recommend_items[: k]:
+        for history_item in history_items:
+            if recommend_item in relevant_items:
+                distance_sum += distancies[recommend_item, history_item]
+
+    serendipity = distance_sum / len(history_items) / k
+
+    return serendipity
 
 
-def mean_serendipity_at_k(items: List[int], **kwargs) -> float:
-    """TO DO"""
-    ...
+def mean_serendipity_at_k(relevant_lists: Dict[int, List[int]],
+                          history_lists: Dict[int, List[int]],
+                          recommend_lists: Dict[int, List[int]],
+                          distancies: lil_matrix,
+                          k: int = 10) -> float:
+
+    serendipity_sum = 0
+    n_users = 0
+
+    for user, relevant_items in relevant_lists.items():
+        history_items = history_lists.get(user, [])
+        recommend_items = recommend_lists.get(user, [])
+        serendipity_sum += serendipity_at_k(relevant_items, history_items, recommend_items, distancies, k)
+        n_users += 1
+
+    score = serendipity_sum / n_users
+
+    return score
