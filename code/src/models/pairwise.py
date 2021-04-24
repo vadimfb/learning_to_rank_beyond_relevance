@@ -19,8 +19,7 @@ class PairWiseMatrixFactorization(nn.Module):
                  lr: float = 0.01,
                  reg_1: float = 0.001,
                  reg_2: float = 0.001,
-                 gpuid: str = '0',
-                 early_stop: bool = True):
+                 gpuid: str = '0'):
         """
         Pair-wise Matrix Factorization Recommender Class
         Parameters
@@ -33,7 +32,6 @@ class PairWiseMatrixFactorization(nn.Module):
         reg_1 : float, first-order regularization term
         reg_2 : float, second-order regularization term
         gpuid : str, GPU ID
-        early_stop : bool, whether to activate early stop mechanism
         """
         super(PairWiseMatrixFactorization, self).__init__()
 
@@ -50,8 +48,6 @@ class PairWiseMatrixFactorization(nn.Module):
 
         nn.init.normal_(self.user_embeddings.weight, std=0.01)
         nn.init.normal_(self.item_embeddings.weight, std=0.01)
-
-        self.early_stop = early_stop
 
     def forward(self,
                 users: torch.Tensor,
@@ -70,22 +66,24 @@ class PairWiseMatrixFactorization(nn.Module):
     def loss(self, positive_preds: torch.Tensor, negative_preds: torch.Tensor):
         raise NotImplementedError(f'Implement loss in {self.__class__.__name__}')
 
-    def fit(self, train_loader, optimizer: torch.optim.Optimizer):
+    def fit(self, train_loader: torch.utils.data.DataLoader, optimizer: torch.optim.Optimizer, show_progress: bool = False):
 
         if torch.cuda.is_available():
             self.cuda()
         else:
             self.cpu()
 
-        last_loss = 0.
         for epoch in range(1, self.epochs + 1):
             self.train()
 
             current_loss = 0.
             # set process bar display
-            pbar = tqdm(train_loader)
-            pbar.set_description(f'[Epoch {epoch:03d}]')
-            for users, positive_items, negative_items, label in pbar:
+            if show_progress:
+                pbar = tqdm(train_loader)
+                pbar.set_description(f'[Epoch {epoch:03d}]')
+            else:
+                pbar = train_loader
+            for users, positive_items, negative_items in pbar:
                 if torch.cuda.is_available():
                     users = users.cuda()
                     positive_items = positive_items.cuda()
@@ -109,25 +107,18 @@ class PairWiseMatrixFactorization(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                pbar.set_postfix(loss=loss.item())
+                if show_progress:
+                    pbar.set_postfix(loss=loss.item())
                 current_loss += loss.item()
-
-            self.eval()
-            delta_loss = float(current_loss - last_loss)
-            if (abs(delta_loss) < 1e-5) and self.early_stop:
-                print('Satisfy early stop mechanism')
-                break
-            else:
-                last_loss = current_loss
 
     def predict(self, users: torch.Tensor, k: int = 10) -> Dict[int, List[Tuple[int, float]]]:
 
         user_embeddings = self.user_embeddings(users)
-        scores = user_embeddings.dot(self.item_embeddings.weight.T)
+        scores = user_embeddings.matmul(self.item_embeddings.weight.T)
         item_lists = scores.argsort(dim=1, descending=True)[:, :k].detach().numpy()
 
         n_users = users.shape[0]
-        weight_lists = scores[np.repeat(np.arange(n_users), k), item_lists.ravel()].detach().numpy()
+        weight_lists = scores[np.repeat(np.arange(n_users), k), item_lists.ravel()].reshape(n_users, k).detach().numpy()
         users = users.detach().numpy()
 
         recommend_lists = {}
@@ -150,8 +141,7 @@ class BPRMatrixFactorization(PairWiseMatrixFactorization):
                  lr=0.01,
                  reg_1=0.001,
                  reg_2=0.001,
-                 gpuid='0',
-                 early_stop=True):
+                 gpuid='0'):
 
         super(BPRMatrixFactorization, self).__init__(user_num,
                                                      item_num,
@@ -160,8 +150,7 @@ class BPRMatrixFactorization(PairWiseMatrixFactorization):
                                                      lr,
                                                      reg_1,
                                                      reg_2,
-                                                     gpuid,
-                                                     early_stop)
+                                                     gpuid)
 
     def loss(self, positive_preds: torch.Tensor, negative_preds: torch.Tensor):
 
