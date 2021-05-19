@@ -110,7 +110,8 @@ def diversity_at_k(items: List[int],
             if item_i != item_j:
                 diversity += distancies[item_i, item_j]
 
-    diversity = diversity / (k * (k - 1))
+    if k != 1:
+        diversity = diversity / (k * (k - 1))
 
     return diversity
 

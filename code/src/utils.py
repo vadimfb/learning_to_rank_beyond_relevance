@@ -4,7 +4,10 @@ import os
 
 from typing import Tuple, List, Dict
 from sklearn.model_selection import KFold
-from math import ceil
+from math import ceil, log
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import normalize
+from scipy.sparse.lil import lil_matrix
 
 
 def reindex_user_and_item(df: pd.DataFrame) -> None:
@@ -88,3 +91,31 @@ def get_folds_by_time(df: pd.DataFrame,
         folds[f'val_{i}'] = (train_fold, test_fold)
 
     return folds
+
+
+def calculate_movielens_distancies(item_data: pd.DataFrame) -> lil_matrix:
+
+    vectorizer = CountVectorizer(binary=True, lowercase=False)
+    item_genre_features = vectorizer.fit_transform(
+        item_data.genre.str.split('|').apply(lambda genres: ' '.join(genres)))
+    normalized_item_genre_features = normalize(item_genre_features)
+    item_similarity = normalized_item_genre_features.dot(normalized_item_genre_features.T)
+    item_similarity = item_similarity
+    distancies = item_similarity
+    distancies.data = 1 - item_similarity.data
+    return distancies.tolil()
+
+
+def caclculate_long_tail(ratings: pd.DataFrame) -> Dict[int, float]:
+
+    n_users = ratings['user'].nunique()
+    long_tail = ratings.groupby('item')['user'].agg(pd.Series.nunique)
+    long_tail = (long_tail / n_users)
+    long_tail = (-long_tail.apply(log)).to_dict()
+
+    return long_tail
+
+
+def calculate_n_items(ratings: pd.DataFrame) -> int:
+
+    return ratings['item'].nunique()
